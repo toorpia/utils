@@ -351,7 +351,7 @@ def multi_filter(options):
         __check_required_options_for_sound(options) # check if required options are given for sound type data
 
     if not os.path.exists(options['base_segment']):
-        raise Exception('base_segemnt is required')
+        raise Exception('base_segment is required')
 
     if not 'sampling_rate' in options:
         raise Exception('sample_rate is required')
