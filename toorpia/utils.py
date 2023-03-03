@@ -108,6 +108,8 @@ def __make_option_str_for_sound(options):
         option_str += ' -nm ' + str(options['n_moving_average'])
     if 'window_function' in options:
         option_str += ' -wf ' + str(options['window_function'])
+    if 'segment_overlap_ratio' in options:
+        option_str += ' -ol ' + str(options['segment_overlap_ratio'])
     
     return option_str
 
