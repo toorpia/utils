@@ -44,9 +44,9 @@ def show_params():
       'rawdata_type': '',                         # 'table' or 'sound'
       'working_dir': 'analysis',                  # working dir to store analysis results
       'type_weight': 'analysis/type_weight.csv',  # file path of type_weight.csv
-      'map_inspector':    True,                   # False if you don't want to start map_inspector automatically
-      'map_inspector_sharable': False,            # True if you want to share your results on map_inspector
-      'monitoring_scope': False,                  # True if you want to start monitoring_scope automatically
+      'map_inspector':    True,                   # set False if you don't want to start map_inspector automatically
+      'map_inspector_sharable': False,            # set True if you want to share your results on map_inspector
+      'monitoring_scope': False,                  # set True if you want to start monitoring_scope automatically
       'monitoring_scope_sharable': False,         # set True if you want to share your results on monitoring_scope
       'base_segment': 'analysis/segments.csv',    # segment file name of basemap
       'add_segment': 'analysis/segments-add.csv', # segment file name of addplots
@@ -55,6 +55,10 @@ def show_params():
       'status_mi': 'analysis/status.mi',          # data file name to store current mining status for basemap on map_inspector
       'add_status_mi': 'analysis/status-add.mi',  # data file name to store current mining status for basemap and addplots on map_inspector
       'status_ms': 'analysis/status.ms',          # data file name to store current mining status for basemap and addplots on monitoring_scope
+
+      # test parameters regarding the distance calculation. following options are mutually exclusive. you can use only one of them.
+      'disable_normalization': False,   # set True if you want to disable vector normalization proc. completely.
+      'only_angle': False,              # set True if you want to use only vector angles for distance calculation. It's ignored when disable_normalization option is defined and it has no effect on sound data.
     }
     '''.strip()
     print(string)
@@ -260,8 +264,14 @@ def create_basemap(options):
     if options['rawdata_type'] == 'sound' and 'multi_filter_option' in options:
         multi_filter(options)
 
+    option_str_toorpia = ''
+    if 'disable_normalization' in options and options['disable_normalization'] == True:
+        option_str_toorpia = '-u'
+    elif 'only_angle' in options and options['only_angle'] == True:
+        option_str_toorpia = '-d'
+
     base_xy_log = options['base_xy'] + '.log'
-    rv = subprocess.run(f"toorpia -m base {options['base_segment']} 2> {base_xy_log} > {options['base_xy']}", shell=True)
+    rv = subprocess.run(f"toorpia -m base {option_str_toorpia} {options['base_segment']} 2> {base_xy_log} > {options['base_xy']}", shell=True)
     if rv.returncode != 0:
         print(f"toorpia command failed. see {base_xy_log}", file=sys.stderr)
         sys.exit(1)
@@ -344,8 +354,14 @@ def addplot(options):
     if options['rawdata_type'] == 'sound' and 'multi_filter_option' in options:
         multi_filter_add(options)
 
+    option_str_toorpia = ''
+    if 'disable_normalization' in options and options['disable_normalization'] == True:
+        option_str_toorpia = '-u'
+    elif 'only_angle' in options and options['only_angle'] == True:
+        option_str_toorpia = '-d'
+
     add_xy_log = options['add_xy'] + '.log'
-    rv = subprocess.run(f"toorpia -m add {options['base_segment']} {options['base_xy']} {options['add_segment']} 2> {add_xy_log} > {options['add_xy']}", shell=True)
+    rv = subprocess.run(f"toorpia -m add {option_str_toorpia} {options['base_segment']} {options['base_xy']} {options['add_segment']} 2> {add_xy_log} > {options['add_xy']}", shell=True)
     if rv.returncode != 0:
         print(f"toorpia command failed. see {add_xy_log}", file=sys.stderr)
         sys.exit(1)
