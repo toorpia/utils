@@ -77,12 +77,10 @@ def __check_rawdata_type(options):
         options['rawdata_type'] = 'sound'
     elif rdf[0].endswith('.csv') or rdf[0].endswith('.CSV') or rdf[0].endswith('.csv.gz') or rdf[0].endswith('.CSV.gz'):
         if 'rawdata_type' not in options:
-            if 'type_weight' in options:
-                options['rawdata_type'] = 'table'
-            elif 'data_index' in options or 'sampling_rate' in options or 'window_length' in options:
+            if 'data_index' in options or 'sampling_rate' in options or 'window_length' in options:
                 options['rawdata_type'] = 'sound'
             else:
-                raise Exception('rawdata_type is not recognized. Please specify type_weight for table, or specify data_index or sampling_rate or window_length for sound.')
+                options['rawdata_type'] = 'table'
         else: # if rawdata_type is specified, check if it is valid
             if options['rawdata_type'] != 'table' and options['rawdata_type'] != 'sound':
                 raise Exception('rawdata_type is not valid: %s' % options['rawdata_type'])
@@ -98,15 +96,12 @@ def __check_working_dir(options):
         raise PermissionError('Directory not writable: %s' % options['working_dir'])
 
 def __check_required_options_for_table(options):
+    __check_working_dir(options)
+
     if 'type_weight' not in options:
         raise Exception('exec create_type_weight function first')
     elif not os.path.exists(options['type_weight']):
         raise FileNotFoundError(options['type_weight'])
-
-    if 'window_size' not in options:
-        options['window_size'] = 1
-    if 'reduce_factor' not in options:
-        options['reduce_factor'] = 1
 
 def __check_required_options_for_sound(options):
     if options['rawdata_type'] == 'table':
