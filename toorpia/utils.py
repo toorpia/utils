@@ -7,6 +7,58 @@ from monitoring_scope.monitoring_scope import monitoring_scope
 from numpy import float32
 from IPython.display import display, HTML
 
+# show help when user imports this library
+help_string = '''
+This is toorPIA Utility. The following commands are available.
+    create_type_weight(params): create type_weight.csv
+    create_basemap(params):     create a basemap
+    addplot(params):            addplot to specified basename
+    show_params():              show all available parameters
+'''.strip()
+print(help_string)
+
+def show_params():
+    string = '''
+    params = {
+      # required parameters
+      'rawdata': '',   # data files to be analyzed by toorPIA. multiple files should be specified on a single line connected by space delimiter.
+      
+      # required parameters for sound type data
+      'data_index': 1,              # specify column number to read for sound type data in CSV format
+      'sampling_rate': 48000,       # sampling rate (Hz). this option is ignored when the input file is in wave format.
+      'window_length': 65536,       # FFT parameter: window length
+      'window_function': 'hanning', # FFT parameter: window function. 'hanning' or 'hamming'
+      
+      # available parameters for table type CSV data
+      'reduce_factor': 1,  # reduce factor (rf): reduce the number of output records to 1/rf of the number of input records.
+      'window_size':   1,  # window size of moving average
+      
+      # available parameters for sound type data
+      'high_pass_filter': None,    # high pass filter (Hz) to apply to sound type data
+      'low_pass_filter':  None,    # low pass filter (Hz) to apply to sound type data
+      'multi_filter_option': '',   # multipass (bandpass) filter by filter string (ex. ":300,4000:5000,6000:8000,20000:")
+      'n_moving_average': 197,     # moving average window size when smoothing FFT spectrum (default: windowLength * 0.003). You should set this option to 1 to stop smoothing.
+      'segment_overlap_ratio': 50, # overlap ratio (%) between successive segments
+      
+      # automatically set parameters (you can also set these forcibly)
+      'rawdata_type': '',                         # 'table' or 'sound'
+      'working_dir': 'analysis',                  # working dir to store analysis results
+      'type_weight': 'analysis/type_weight.csv',  # file path of type_weight.csv
+      'map_inspector':    True,                   # False if you don't want to start map_inspector automatically
+      'map_inspector_sharable': False,            # True if you want to share your results on map_inspector
+      'monitoring_scope': False,                  # True if you want to start monitoring_scope automatically
+      'monitoring_scope_sharable': False,         # set True if you want to share your results on monitoring_scope
+      'base_segment': 'analysis/segments.csv',    # segment file name of basemap
+      'add_segment': 'analysis/segments-add.csv', # segment file name of addplots
+      'base_xy': 'analysis/base-xy.dat',          # data file name to store coordinates of basemap
+      'add_xy': 'analysis/add-xy.dat',            # data file name to store coordinates of addplots
+      'status_mi': 'analysis/status.mi',          # data file name to store current mining status for basemap on map_inspector
+      'add_status_mi': 'analysis/status-add.mi',  # data file name to store current mining status for basemap and addplots on map_inspector
+      'status_ms': 'analysis/status.ms',          # data file name to store current mining status for basemap and addplots on monitoring_scope
+    }
+    '''.strip()
+    print(string)
+
 def __check_rawdata_existence(options):
     if 'rawdata' not in options:
         raise Exception('rawdata is not specified')
@@ -117,19 +169,13 @@ def __set_output_file_for_basemap(options):
     if 'base_segment' not in options:
         options['base_segment'] = options['working_dir'] + '/segments.csv'
 
-    if 'base_segment_log' not in options:
-        options['base_segment_log'] = options['working_dir'] + '/segments.log'
-
     if 'base_xy' not in options:
         options['base_xy'] = options['working_dir'] + '/xy.dat'
-
-    if 'base_xy_log' not in options:
-        options['base_xy_log'] = options['working_dir'] + '/xy.log'
 
     if 'status_mi' not in options:
         options['status_mi'] = options['working_dir'] + '/status.mi'
         
-    for file in [options['base_segment'], options['base_segment_log'], options['base_xy'], options['base_xy_log'], options['status_mi']]:
+    for file in [options['base_segment'], options['base_xy'], options['status_mi']]:
         dirname = os.path.dirname(file)
         if not os.path.exists(dirname):
             os.makedirs(dirname, exist_ok=True)
@@ -159,14 +205,8 @@ def __set_output_file_for_addplot(options):
     if 'add_segment' not in options:
         options['add_segment'] = options['working_dir'] + '/segments-add.csv'
 
-    if 'add_segment_log' not in options:
-        options['add_segment_log'] = options['working_dir'] + '/segments-add.log'
-
     if 'add_xy' not in options:
         options['add_xy'] = options['working_dir'] + '/xy-add.dat'
-
-    if 'add_xy_log' not in options:
-        options['add_xy_log'] = options['working_dir'] + '/xy-add.log'
 
     if 'add_status_mi' not in options:
         options['add_status_mi'] = options['working_dir'] + '/status-add.mi'
@@ -174,7 +214,7 @@ def __set_output_file_for_addplot(options):
     if 'status_ms' not in options:
         options['status_ms'] = options['working_dir'] + '/status.ms'
 
-    for file in [options['add_segment'], options['add_segment_log'], options['add_xy'], options['add_xy_log'], options['add_status_mi']]:
+    for file in [options['add_segment'], options['add_xy'], options['add_status_mi']]:
         if not os.path.exists(file):
             os.makedirs(os.path.dirname(file), exist_ok=True)
 
@@ -184,7 +224,6 @@ def create_type_weight(options):
 
     if 'type_weight' not in options:
         options['type_weight'] = options['working_dir'] + '/type_weight.csv'
-        options['type_weight_log'] = options['working_dir'] + '/type_weight.log'
     if os.path.exists(options['type_weight']):
         os.remove(options['type_weight'])
 
@@ -194,9 +233,10 @@ def create_type_weight(options):
         raise Exception('rawdata_type is sound, so type_weight is not needed')
     
 
-    rv = subprocess.run(f"mkcsvseg -o {options['type_weight']} {options['rawdata']} 1> /dev/null 2> {options['type_weight_log']}", shell=True)
+    type_weight_log = options['type_weight'] + '.log'
+    rv = subprocess.run(f"mkcsvseg -o {options['type_weight']} {options['rawdata']} 1> /dev/null 2> {type_weight_log}", shell=True)
     if rv.returncode != 0:
-        print(f"mkcsvseg command failed.", file=sys.stderr)
+        print(f"mkcsvseg command failed. see {type_weight_log}", file=sys.stderr)
         sys.exit(1)
 
     display(HTML(f"<p>Click link <a href='{options['type_weight']}'>{options['type_weight']}</a> to edit and save it.</p>"))
@@ -216,17 +256,19 @@ def create_basemap(options):
 
     __set_output_file_for_basemap(options)
 
-    rv = subprocess.run(f"{cmd_str} {option_str} {options['rawdata']} 2> {options['base_segment_log']} > {options['base_segment']}", shell=True)
+    base_segment_log = options['base_segment'] + '.log'
+    rv = subprocess.run(f"{cmd_str} {option_str} {options['rawdata']} 2> {base_segment_log} > {options['base_segment']}", shell=True)
     if rv.returncode != 0:
-        print(f"{cmd_str} command failed. see {options['base_segment_log']}", file=sys.stderr)
+        print(f"{cmd_str} command failed. see {base_segment_log}", file=sys.stderr)
         sys.exit(1)
     
-    if 'multi_filter_option' in options:
+    if options['rawdata_type'] == 'sound' and 'multi_filter_option' in options:
         multi_filter(options)
 
-    rv = subprocess.run(f"toorpia -m base {options['base_segment']} 2> {options['base_xy_log']} > {options['base_xy']}", shell=True)
+    base_xy_log = options['base_xy'] + '.log'
+    rv = subprocess.run(f"toorpia -m base {options['base_segment']} 2> {base_xy_log} > {options['base_xy']}", shell=True)
     if rv.returncode != 0:
-        print(f"toorpia command failed. see {options['base_xy_log']}", file=sys.stderr)
+        print(f"toorpia command failed. see {base_xy_log}", file=sys.stderr)
         sys.exit(1)
 
     if 'map_inspector' in options and options['map_inspector'] == False:
@@ -298,17 +340,19 @@ def addplot(options):
     __check_basemap_existence(options)
     __set_output_file_for_addplot(options)
 
-    rv = subprocess.run(f"{cmd_str} {option_str} {options['rawdata']} 2> {options['add_segment_log']} > {options['add_segment']}", shell=True)
+    add_segment_log = options['add_segment'] + '.log'
+    rv = subprocess.run(f"{cmd_str} {option_str} {options['rawdata']} 2> {add_segment_log} > {options['add_segment']}", shell=True)
     if rv.returncode != 0:
-        print(f"{cmd_str} command failed. see {options['add_segment_log']}", file=sys.stderr)
+        print(f"{cmd_str} command failed. see {add_segment_log}", file=sys.stderr)
         sys.exit(1)
 
-    if 'multi_filter_option' in options:
+    if options['rawdata_type'] == 'sound' and 'multi_filter_option' in options:
         multi_filter_add(options)
 
-    rv = subprocess.run(f"toorpia -m add {options['base_segment']} {options['base_xy']} {options['add_segment']} 2> {options['add_xy_log']} > {options['add_xy']}", shell=True)
+    add_xy_log = options['add_xy'] + '.log'
+    rv = subprocess.run(f"toorpia -m add {options['base_segment']} {options['base_xy']} {options['add_segment']} 2> {add_xy_log} > {options['add_xy']}", shell=True)
     if rv.returncode != 0:
-        print(f"toorpia command failed. see {options['add_xy_log']}", file=sys.stderr)
+        print(f"toorpia command failed. see {add_xy_log}", file=sys.stderr)
         sys.exit(1)
     
     if 'map_inspector' in options and options['map_inspector'] == False:
