@@ -1,16 +1,24 @@
-# -*- coding: utf-8 -*-
-#
-# pip install toorpia-0.0.0.tar.gz  --no-index --find-links file:///.
-
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 setup(
-    name='toorpia',
-    version='2.2.0-alpha',
-    packages=[
-        'toorpia'
+    name='toorpia_utils',
+    version='0.1.0',
+    description='utilities for toorpia',
+    author='toor Inc.',
+    author_email='toorpia@toor.jpn.com',
+    url='https://github.com/toorpia/utils',
+    packages=find_packages(),
+    install_requires=[
+        'numpy',
     ],
-    url='https://www.toor.jpn.com/',
-    author='toor, Inc.',
-    author_email='contact@toor.jpn.com'
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: BSD License',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+    ],
 )
